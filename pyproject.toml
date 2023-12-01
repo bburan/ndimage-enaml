@@ -1,0 +1,26 @@
+[project]
+name = "ndimage-enaml"
+description = "Common tools for creating interactive views of ND images in Enaml"
+readme = "readme.rst"
+requires-python = ">=3.7"
+license = {file = "LICENSE.txt"}
+authors = [
+    {name = "Brad Buran", email="buran@ohsu.edu"},
+]
+maintainers = [
+    {name = "Brad Buran", email="buran@ohsu.edu"},
+]
+dependencies = [
+    "atom",
+    "enaml[qt6-pyside]",
+    "matplotlib",
+    "numpy",
+]
+dynamic = ["version"]
+
+[build-system]
+requires = ["setuptools>=61.2", "wheel", "setuptools_scm[toml]>=3.4.3"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "ndimage_enaml/version.py"

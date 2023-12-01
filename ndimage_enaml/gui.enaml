@@ -1,0 +1,91 @@
+import logging
+log = logging.getLogger(__name__)
+
+from importlib import resources
+from pathlib import Path
+
+from enaml.application import deferred_call
+from enaml.core.api import Conditional, Looper
+from enaml.icon import Icon, IconImage
+from enaml.image import Image
+from enaml.layout.api import align, hbox, InsertTab, RemoveItem, spacer, TabLayout, vbox
+from enaml.stdlib.fields import FloatField
+from enaml.stdlib.message_box import critical, information, question
+from enaml.qt.QtCore import Qt
+from enaml.widgets.api import (Action, ActionGroup, ButtonGroup, CheckBox,
+                               Container, DockArea, DockItem, DualSlider,
+                               Feature, FileDialogEx, Form, HGroup, Html,
+                               Label, MainWindow, Menu, MenuBar, MPLCanvas,
+                               ObjectCombo, PopupView, ProgressBar, PushButton,
+                               Slider, VGroup, Window)
+
+
+class NDImageCanvas(MPLCanvas):
+
+    def set_focus(self, event=None):
+        self.figure.canvas.setFocus(Qt.OtherFocusReason)
+
+
+def bind_focus(items, cb):
+    observe = ['toggled', 'selected', 'value', 'clicked']
+    for item in items:
+        for o in observe:
+            if hasattr(item, o):
+                item.observe(o, cb)
+        if getattr(item, 'children', []):
+            bind_focus(item.children, cb)
+
+
+enamldef NDImageDockItem(DockItem):
+    attr presenter
+    alias figure: canvas.figure
+
+    presenter ::
+        print('binding')
+        presenter.observe('figure', lambda e: bind(e['value'], presenter))
+
+    closable = False
+    Container: container:
+        initialized ::
+            deferred_call(bind_focus, container.children, canvas.set_focus)
+            deferred_call(canvas.set_focus)
+        NDImageCanvas: canvas:
+            toolbar_visible = False
+
+
+enamldef ChannelConfigPopup(PopupView):
+    attr presenter
+    attr display_apply = False
+
+    anchor = (0.5, 0.0)
+    parent_anchor = (0.5, 1.0)
+    arrow_size = 20
+
+    Container:
+        layout_constraints => ():
+            widgets = self.visible_widgets()
+            cb = widgets[::2]
+            slider = widgets[1::2]
+            constraints = [vbox(*[hbox(c, s) for c, s in zip(cb, slider)])]
+            constraints.append(align('left', *slider))
+            constraints.append(align('left', *cb))
+            return constraints
+
+        Looper:
+            iterable << presenter.current_artist.channel_config.items() \
+                if presenter.current_artist is not None else {}
+
+            CheckBox:
+                text = loop_item[0]
+                checked << loop_item[1].visible
+                checked ::
+                    presenter.set_channel_visible(loop_item[0], checked, display_apply)
+            DualSlider:
+                minimum = 0
+                maximum = 100
+                low_value << int(loop_item[1].min_value * 100)
+                high_value << int(loop_item[1].max_value * 100)
+                low_value ::
+                    presenter.set_channel_min_value(loop_item[0], low_value / 100, display_apply)
+                high_value ::
+                    presenter.set_channel_max_value(loop_item[0], high_value / 100, display_apply)
