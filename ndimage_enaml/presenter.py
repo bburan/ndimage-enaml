@@ -159,11 +159,13 @@ class NDImagePlot(Atom):
             self.redraw()
             self.needs_redraw = False
 
-    def redraw(self, event=None):
+    def get_image(self):
         z_slice = None if self.display_mode == 'projection' else self.z_slice
         channels = [c for c in self.channel_config.values() if c.visible]
-        image = self.ndimage.get_image(channels=channels, z_slice=z_slice).swapaxes(0, 1)
-        self.artist.set_data(image)
+        return self.ndimage.get_image(channels=channels, z_slice=z_slice).swapaxes(0, 1)
+
+    def redraw(self, event=None):
+        self.artist.set_data(self.get_image())
         xlb, xub, ylb, yub = extent = self.ndimage.get_image_extent()[:4]
         self.artist.set_extent(extent)
         self.rectangle.set_bounds(xlb, ylb, xub-xlb, yub-ylb)

@@ -4,6 +4,7 @@ log = logging.getLogger(__name__)
 from importlib import resources
 from pathlib import Path
 
+from atom.api import set_default
 from enaml.application import deferred_call
 from enaml.core.api import Conditional, Looper
 from enaml.icon import Icon, IconImage
@@ -22,6 +23,8 @@ from enaml.widgets.api import (Action, ActionGroup, ButtonGroup, CheckBox,
 
 class NDImageCanvas(MPLCanvas):
 
+    toolbar_visible = set_default(False)
+
     def set_focus(self, event=None):
         self.figure.canvas.setFocus(Qt.OtherFocusReason)
 
@@ -34,23 +37,6 @@ def bind_focus(items, cb):
                 item.observe(o, cb)
         if getattr(item, 'children', []):
             bind_focus(item.children, cb)
-
-
-enamldef NDImageDockItem(DockItem):
-    attr presenter
-    alias figure: canvas.figure
-
-    presenter ::
-        print('binding')
-        presenter.observe('figure', lambda e: bind(e['value'], presenter))
-
-    closable = False
-    Container: container:
-        initialized ::
-            deferred_call(bind_focus, container.children, canvas.set_focus)
-            deferred_call(canvas.set_focus)
-        NDImageCanvas: canvas:
-            toolbar_visible = False
 
 
 enamldef ChannelConfigPopup(PopupView):
@@ -89,3 +75,59 @@ enamldef ChannelConfigPopup(PopupView):
                     presenter.set_channel_min_value(loop_item[0], low_value / 100, display_apply)
                 high_value ::
                     presenter.set_channel_max_value(loop_item[0], high_value / 100, display_apply)
+
+
+enamldef DisplayConfig(Container): dc:
+
+    attr presenter
+
+    constraints = [
+        hbox(display_label, channels, display_as_label, display_mode, z_slice_number_label, z_slice, spacer),
+        align('v_center', display_label, channels, display_as_label, display_mode, z_slice_number_label, z_slice),
+    ]
+
+    Label: display_label:
+        text = 'Display'
+
+    PushButton: channels:
+        text = 'Channels'
+        clicked ::
+            popup = ChannelConfigPopup(self, presenter=presenter)
+            popup.show()
+
+    Label: display_as_label:
+        text = 'as'
+
+    ObjectCombo: display_mode:
+        items = ['projection', 'slice']
+        selected << presenter.current_artist.display_mode
+        selected ::
+            presenter.set_display_mode(selected)
+
+    Label: z_slice_number_label:
+        text = 'number'
+        enabled << display_mode.selected == 'slice'
+
+    Slider: z_slice:
+        enabled << display_mode.selected == 'slice'
+        tick_interval = 1
+        value << presenter.current_artist.z_slice
+        value ::
+            presenter.set_z_slice(value)
+        minimum << presenter.current_artist.z_slice_min
+        maximum << presenter.current_artist.z_slice_max
+        tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
+
+
+enamldef NDImageDockItem(DockItem): di:
+    attr presenter
+
+    closable = False
+    Container: container:
+        initialized ::
+            deferred_call(bind_focus, container.children, canvas.set_focus)
+            deferred_call(canvas.set_focus)
+        DisplayConfig:
+            presenter << di.presenter
+        NDImageCanvas: canvas:
+            figure << di.presenter.figure
