@@ -19,6 +19,13 @@ CHANNEL_CONFIG = {
 }
 
 
+LABEL_CONFIG = {
+    'artifact': 'maroon',
+    'selected': 'white',
+    'orphan': 'mediumseagreen',
+}
+
+
 def get_image(image, *args, **kwargs):
     # Ensure that image is at least 5D (i.e., a stack of 3D multichannel images).
     if image.ndim == 4:
@@ -87,8 +94,6 @@ def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
         if c_name in channel_config:
             config = channel_config[c_name]
             rgb = colors.to_rgba(config['display_color'])[:3]
-            print(rgb)
-
             lb = config['min_value']
             ub = config['max_value']
             d = np.clip((data[..., c] - lb) / (ub - lb), 0, 1)
@@ -98,18 +103,35 @@ def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
     return np.concatenate([i[np.newaxis] for i in image]).max(axis=0)
 
 
-def tile_images(images, n_cols=15, padding=1):
+def tile_images(images, n_cols=15, padding=2, classifiers=None):
     n = len(images)
     n_rows = int(np.ceil(n / n_cols))
 
     xs, ys = images.shape[1:3]
     x_size = (xs + padding) * n_cols + padding
     y_size = (ys + padding) * n_rows + padding
-    tiled_image = np.full((x_size, y_size, 3), 1.0)
+    tiled_image = np.full((x_size, y_size, 3), 0.0)
     for i, img in enumerate(images):
         col = i % n_cols
         row = i // n_cols
         xlb = (xs + padding) * col + padding
         ylb = (ys + padding) * row + padding
         tiled_image[xlb:xlb+xs, ylb:ylb+ys] = img
+
+    if classifiers is None:
+        classifiers = {}
+
+    for label, indices in classifiers.items():
+        color = LABEL_CONFIG.get(label, 'white')
+        rgb = colors.to_rgba(color)[:3]
+        for i in indices:
+            col = i % n_cols
+            row = i // n_cols
+            xlb = (xs + padding) * col + padding - 1
+            ylb = (ys + padding) * row + padding - 1
+            tiled_image[xlb, ylb:ylb+ys+1, :] = rgb
+            tiled_image[xlb+xs+1, ylb:ylb+ys+1, :] = rgb
+            tiled_image[xlb:xlb+xs+1, ylb, :] = rgb
+            tiled_image[xlb:xlb+xs+2, ylb+ys+1, :] = rgb
+
     return tiled_image
