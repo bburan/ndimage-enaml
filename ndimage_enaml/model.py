@@ -4,6 +4,7 @@ log = logging.getLogger(__name__)
 from atom.api import Atom, Bool, Dict, Float, Int, List, Str, Typed
 from matplotlib import transforms as T
 import numpy as np
+from raster_geometry import sphere
 from scipy import ndimage
 from scipy import signal
 

@@ -32,19 +32,15 @@ def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
     from .model import ChannelConfig
     if channel_names is None:
         channel_names = [f'Unknown {i+1}' for i in range(image.shape[-1])]
-
-    # z_slice can either be an integer or a slice object.
-    if z_slice is not None:
-        image = image[:, :, :, z_slice, :]
-    if image.ndim == 5:
-        image = image.max(axis='xyz'.index(axis) + 1)
-
-    data = image
+    if z_slice is None:
+        data = image.max(axis='xyz'.index(axis) + 1)
+    else:
+        data = image[:, :, :, z_slice, :]
 
     # Normalize data
-    img_max =  np.percentile(image, norm_percentile, axis=(0, 1, 2), keepdims=True)
-    img_mask = img_max != 0
-    data = np.divide(image, img_max, where=img_mask).clip(0, 1)
+    data_max =  np.percentile(data, norm_percentile, axis=(0, 1, 2), keepdims=True)
+    data_mask = data_max != 0
+    data = np.divide(data, data_max, where=data_mask).clip(0, 1)
 
     if channels is None:
         channels = channel_names
