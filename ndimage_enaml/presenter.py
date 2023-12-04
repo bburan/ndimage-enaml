@@ -48,11 +48,14 @@ class NDImagePlot(Atom):
 
     channel_config = Value()
 
-    display_mode = Enum("projection", "slice")
+    display_mode = Enum("projection", "substack", "slice")
     display_channels = List()
     visible_channels = Property()
     extent = Tuple()
-    z_slice = Int(0)
+    z_slice = Property()
+    z_slice_lb = Int(0)
+    z_slice_ub = Int(1)
+    z_slice_thickness = Int(1)
     z_slice_min = Int(0)
     z_slice_max = Int(0)
     shift = Float()
@@ -78,7 +81,7 @@ class NDImagePlot(Atom):
             "zorder": self.zorder,
             "display_mode": self.display_mode,
             "display_channels": self.display_channels,
-            "z_slice": self.z_slice,
+            #"z_slice": self.z_slice,
             "z_slice_min": self.z_slice_min,
             "z_slice_max": self.z_slice_max,
             "shift": self.shift,
@@ -89,7 +92,7 @@ class NDImagePlot(Atom):
         self.zorder = state["zorder"]
         self.display_mode = state["display_mode"]
         self.display_channels = state["display_channels"]
-        self.z_slice = state["z_slice"]
+        #self.z_slice = state["z_slice"]
         self.z_slice_min = state["z_slice_min"]
         self.z_slice_max = state["z_slice_max"]
         self.shift = state["shift"]
@@ -108,7 +111,8 @@ class NDImagePlot(Atom):
         self.axes.add_patch(self.rectangle)
 
         self.z_slice_max = self.ndimage.z_slice_max
-        self.z_slice = self.ndimage.z_slice_max // 2
+        self.z_slice_lb = self.ndimage.z_slice_max // 2
+        self.z_slice_ub = self.ndimage.z_slice_max // 2 + 1
         self.shift = self.ndimage.get_voxel_size('x') * 5
 
         self.channel_config = {c: ChannelConfig(name=c) for c in ndimage.channel_names}
@@ -130,6 +134,21 @@ class NDImagePlot(Atom):
     def _observe_zorder(self, event):
         self.artist.set_zorder(self.zorder)
 
+    def set_z_substack_thickness(self, value):
+        pass
+
+    def center_z_substack(self, z_slice):
+        '''
+        Centers the z substack around the desired z_slice
+        '''
+        thickness = self.z_slice_ub - self.z_slice_lb
+        self.z_slice_lb = z_slice - int(np.floor(thickness / 2))
+        self.z_slice_ub = z_slice + int(np.ceil(thickness / 2))
+        self.z_slice_thickness = self.z_slice_ub - self.z_slice_lb
+
+    def _get_z_slice(self):
+        return np.s_[self.z_slice_lb:self.z_slice_ub]
+
     def drag_image(self, dx, dy):
         extent = np.array(self.ndimage.extent)
         extent[0:2] += dx
@@ -149,7 +168,7 @@ class NDImagePlot(Atom):
             extent[0:2] += step
         self.ndimage.extent = extent.tolist()
 
-    @observe("z_slice", "display_mode", "alpha", "highlight")
+    @observe("z_slice_lb", "z_slice_ub", "display_mode", "alpha", "highlight")
     def request_redraw(self, event=False):
         self.needs_redraw = True
         deferred_call(self.redraw_if_needed)
@@ -453,12 +472,20 @@ class NDImageCollectionPresenter(FigurePresenter):
         elif self.current_artist is not None:
             self.current_artist.set_channel_max_value(channel_name, high_value)
 
-    def set_z_slice(self, z_slice, all_artists=False):
+    def set_z_slice_lb(self, z_slice, all_artists=False):
         if all_artists:
             for artist in self.ndimage_artists.values():
-                artist.z_slice = z_slice
+                artist.z_slice_lb = z_slice
         elif self.current_artist is not None:
-            self.current_artist.z_slice = z_slice
+            self.current_artist.z_slice_lb = z_slice
+
+    def set_z_slice_ub(self, z_slice, all_artists=False):
+        if all_artists:
+            for artist in self.ndimage_artists.values():
+                artist.z_slice_ub = z_slice
+        elif self.current_artist is not None:
+            self.current_artist.z_slice_ub = z_slice
+
 
     def key_press(self, event):
         raise NotImplementedError
