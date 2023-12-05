@@ -101,8 +101,7 @@ class NDImagePlot(Atom):
         super().__init__(**kwargs)
         self.ndimage = ndimage
         self.axes = axes
-        self.axes.xaxis.set_major_locator(ticker.NullLocator())
-        self.axes.yaxis.set_major_locator(ticker.NullLocator())
+        self.axes.set_axis_off()
         self.rotation_transform = T.Affine2D()
         self.transform = self.rotation_transform + axes.transData
         self.artist = axes.imshow(np.array([[0, 1], [0, 1]]), origin="lower", transform=self.transform)
