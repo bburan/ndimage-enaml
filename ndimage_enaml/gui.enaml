@@ -102,7 +102,7 @@ enamldef DisplayConfig(Container): dc:
 
         ObjectCombo: display_mode:
             items = ['projection', 'substack', 'slice']
-            selected << presenter.current_artist.display_mode
+            selected << presenter.current_artist.display_mode if presenter.current_artist else 'projection'
             selected ::
                 presenter.set_display_mode(selected)
 
