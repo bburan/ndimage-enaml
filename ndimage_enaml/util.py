@@ -26,33 +26,11 @@ LABEL_CONFIG = {
 }
 
 
-def get_image(image, *args, **kwargs):
-    # Ensure that image is at least 5D (i.e., a stack of 3D multichannel images).
-    if image.ndim == 4:
-        return _get_image(image[np.newaxis], *args, **kwargs)[0]
-    else:
-        return _get_image(image, *args, **kwargs)
-
-
-def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
-               norm_percentile=99):
-    from .model import ChannelConfig
+def color_image(image, channel_names=None, channels=None):
     if channel_names is None:
         channel_names = [f'Unknown {i+1}' for i in range(image.shape[-1])]
 
-    # z_slice can either be an integer or a slice object.
-    if z_slice is not None:
-        image = image[:, :, :, z_slice, :]
-    if image.ndim == 5:
-        image = image.max(axis='xyz'.index(axis) + 1)
-
-    data = image
-
-    # Normalize data
-    img_max =  np.percentile(image, norm_percentile, axis=(0, 1, 2), keepdims=True)
-    img_mask = img_max != 0
-    data = np.divide(image, img_max, where=img_mask).clip(0, 1)
-
+    from .model import ChannelConfig
     if channels is None:
         channels = channel_names
     elif isinstance(channels, int):
@@ -88,19 +66,41 @@ def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
                 'max_value': 1,
                 **CHANNEL_CONFIG[c],
             }
-
-    image = []
+    new_image = []
     for c, c_name in enumerate(channel_names):
         if c_name in channel_config:
             config = channel_config[c_name]
             rgb = colors.to_rgba(config['display_color'])[:3]
             lb = config['min_value']
             ub = config['max_value']
-            d = np.clip((data[..., c] - lb) / (ub - lb), 0, 1)
+            d = np.clip((image[..., c] - lb) / (ub - lb), 0, 1)
             d = d[..., np.newaxis] * rgb
-            image.append(d)
+            new_image.append(d)
 
-    return np.concatenate([i[np.newaxis] for i in image]).max(axis=0)
+    return np.concatenate([i[np.newaxis] for i in new_image]).max(axis=0)
+
+
+def get_image(image, *args, **kwargs):
+    # Ensure that image is at least 5D (i.e., a stack of 3D multichannel images).
+    if image.ndim == 4:
+        return _get_image(image[np.newaxis], *args, **kwargs)[0]
+    else:
+        return _get_image(image, *args, **kwargs)
+
+
+def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
+               norm_percentile=99):
+    # z_slice can either be an integer or a slice object.
+    if z_slice is not None:
+        image = image[:, :, :, z_slice, :]
+    if image.ndim == 5:
+        image = image.max(axis='xyz'.index(axis) + 1)
+
+    # Normalize data
+    img_max =  np.percentile(image, norm_percentile, axis=(0, 1, 2), keepdims=True)
+    img_mask = img_max != 0
+    image = np.divide(image, img_max, where=img_mask).clip(0, 1)
+    return color_image(image, channel_names, channels)
 
 
 def tile_images(images, n_cols=15, padding=2, classifiers=None):
@@ -135,3 +135,30 @@ def tile_images(images, n_cols=15, padding=2, classifiers=None):
             tiled_image[xlb:xlb+xs+2, ylb+ys+1, :] = rgb
 
     return tiled_image
+
+
+def project_image(image, channel_names, padding=2):
+    xs, ys, zs, cs = image.shape
+    y_size = xs + ys + padding * 2 + padding
+    x_size = (xs + ys + padding * 2) * cs + padding
+    tiled_image = np.full((x_size, y_size, 3), 0.0)
+
+    for i in range(cs):
+        t = image[..., i] / 255
+        x_proj = t.max(axis=0)
+        y_proj = t.max(axis=1)
+        z_proj = t.max(axis=2)
+        xo = i * (xs + ys + padding * 2) + padding
+        yo = padding
+        zxo = xo
+        zyo = yo
+        xxo = xo + xs + padding
+        xyo = yo
+        yxo = xo
+        yyo = yo + ys + padding
+        tiled_image[zxo:zxo+xs, zyo:zyo+ys, i] = z_proj
+        tiled_image[xxo:xxo+xs, xyo:xyo+ys, i] = x_proj.T
+        tiled_image[yxo:yxo+ys, yyo:yyo+ys, i] = y_proj
+
+    tiled_image = color_image(tiled_image, channel_names)
+    return tiled_image.swapaxes(0, 1)
