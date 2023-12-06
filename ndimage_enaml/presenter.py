@@ -26,6 +26,7 @@ import matplotlib as mp
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseButton
 from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
 from matplotlib import ticker
 from matplotlib import patheffects as pe
 
@@ -91,7 +92,6 @@ class NDImagePlot(Atom):
         self.zorder = state["zorder"]
         self.display_mode = state["display_mode"]
         self.display_channels = state["display_channels"]
-        #self.z_slice = state["z_slice"]
         self.z_slice_min = state["z_slice_min"]
         self.z_slice_max = state["z_slice_max"]
         self.shift = state["shift"]
@@ -103,11 +103,13 @@ class NDImagePlot(Atom):
         self.axes.set_axis_off()
         self.rotation_transform = T.Affine2D()
         self.transform = self.rotation_transform + axes.transData
-        self.artist = axes.imshow(np.array([[0, 1], [0, 1]]), origin="lower", transform=self.transform)
+        self.artist = AxesImage(axes, data=np.array([[]]), origin='lower', transform=self.transform)
+        axes.add_artist(self.artist)
+
+        #self.artist = axes.imshow(np.array([[0, 1], [0, 1]]), origin="lower", transform=self.transform)
         self.rectangle = mp.patches.Rectangle((0, 0), 0, 0, ec='red', fc='None', zorder=5000, transform=self.transform)
         self.rectangle.set_alpha(0)
         self.axes.add_patch(self.rectangle)
-
         self.z_slice_max = self.ndimage.z_slice_max
         self.z_slice_lb = self.ndimage.z_slice_max // 2
         self.z_slice_ub = self.ndimage.z_slice_max // 2 + 1
@@ -483,7 +485,6 @@ class NDImageCollectionPresenter(FigurePresenter):
                 artist.z_slice_ub = z_slice
         elif self.current_artist is not None:
             self.current_artist.z_slice_ub = z_slice
-
 
     def key_press(self, event):
         raise NotImplementedError
