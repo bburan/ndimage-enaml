@@ -111,18 +111,10 @@ enamldef DisplayConfig(HGroup): dc:
 
         DualSlider: dz_slice:
             tick_interval = 1
-            low_value << presenter.current_artist.z_slice_lb
-            low_value ::
-                presenter.set_z_slice_lb(low_value)
-                if dz_constrain.checked:
-                    presenter.set_z_slice_ub(low_value + dz_width.value)
-            high_value << presenter.current_artist.z_slice_ub
-            high_value ::
-                presenter.set_z_slice_ub(high_value)
-                if dz_constrain.checked:
-                    presenter.set_z_slice_lb(high_value - dz_width.value)
+            low_value := presenter.current_artist.z_slice_lb
+            high_value := presenter.current_artist.z_slice_ub
             minimum << presenter.current_artist.z_slice_min
-            maximum << presenter.current_artist.z_slice_max + 1
+            maximum << presenter.current_artist.z_slice_max
             tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
 
         PushButton: dz_constrain:
@@ -132,11 +124,7 @@ enamldef DisplayConfig(HGroup): dc:
 
         IntField: dz_width:
             constraints = [width == 30]
-            value << presenter.current_artist.z_slice_thickness
-            value ::
-                center = int(round((dz_slice.high_value + dz_slice.low_value) / 2))
-                dz_slice.low_value = center - int(np.floor(value / 2))
-                dz_slice.high_value = center + int(np.ceil(value / 2))
+            value := presenter.current_artist.z_slice_thickness
 
     Conditional:
         condition << display_mode.selected == 'slice'

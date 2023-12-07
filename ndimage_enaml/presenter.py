@@ -129,7 +129,27 @@ class NDImagePlot(Atom):
                 self.display_mode = 'slice'
             else:
                 self.display_mode = 'projection'
-        print(self.z_slice_lb, self.z_slice_ub)
+
+    @observe('z_slice_lb', 'z_slice_ub')
+    def _update_z_slice_thickness(self, event):
+        self.z_slice_thickness = self.z_slice_ub - self.z_slice_lb
+
+    def _observe_z_slice_thickness(self, event):
+        thickness = self.z_slice_thickness
+        if thickness > self.z_slice_max:
+            self.z_slice_thickness = self.z_slice_max
+            return
+
+        lb = self.z_slice_lb
+        ub = lb + thickness
+        if lb < 0:
+            lb = 0
+            ub = lb + thickness
+        if ub > self.z_slice_max:
+            lb = self.z_slice_max - thickness
+            ub = self.z_slice_max
+        self.z_slice_lb = lb
+        self.z_slice_ub = ub
 
     def _observe_highlight(self, event):
         if self.highlight:
