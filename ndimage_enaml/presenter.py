@@ -1,6 +1,6 @@
+from copy import deepcopy
 import time
 
-import json
 from atom.api import (
     Atom,
     Bool,
@@ -27,7 +27,6 @@ from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseButton
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
-from matplotlib import ticker
 from matplotlib import patheffects as pe
 
 from matplotlib import patches as mpatches
@@ -35,7 +34,6 @@ from matplotlib import path as mpath
 from matplotlib import transforms as T
 
 import numpy as np
-from scipy import interpolate
 
 from .model import ChannelConfig, NDImage, NDImageCollection
 
@@ -60,7 +58,6 @@ class NDImagePlot(Atom):
     z_slice_max = Int(0)
     shift = Float()
 
-    #ndimage = Typed(NDImage)
     ndimage = Value()
     artist = Value()
     rectangle = Value()
@@ -81,9 +78,6 @@ class NDImagePlot(Atom):
             "zorder": self.zorder,
             "display_mode": self.display_mode,
             "display_channels": self.display_channels,
-            #"z_slice": self.z_slice,
-            "z_slice_min": self.z_slice_min,
-            "z_slice_max": self.z_slice_max,
             "shift": self.shift,
         }
 
@@ -92,8 +86,6 @@ class NDImagePlot(Atom):
         self.zorder = state["zorder"]
         self.display_mode = state["display_mode"]
         self.display_channels = state["display_channels"]
-        self.z_slice_min = state["z_slice_min"]
-        self.z_slice_max = state["z_slice_max"]
         self.shift = state["shift"]
 
     def __init__(self, axes, ndimage, **kwargs):
@@ -106,7 +98,6 @@ class NDImagePlot(Atom):
         self.artist = AxesImage(axes, data=np.array([[]]), origin='lower', transform=self.transform)
         axes.add_artist(self.artist)
 
-        #self.artist = axes.imshow(np.array([[0, 1], [0, 1]]), origin="lower", transform=self.transform)
         self.rectangle = mp.patches.Rectangle((0, 0), 0, 0, ec='red', fc='None', zorder=5000, transform=self.transform)
         self.rectangle.set_alpha(0)
         self.axes.add_patch(self.rectangle)
@@ -121,6 +112,24 @@ class NDImagePlot(Atom):
             config.observe('min_value', self.request_redraw)
             config.observe('max_value', self.request_redraw)
         ndimage.observe('extent', self.request_redraw)
+
+    def next_z_slice(self, step):
+        if self.display_mode == 'projection':
+            if step > 0:
+                self.z_slice_lb = 0
+                self.z_slice_ub = self.z_slice_thickness
+            else:
+                self.z_slice_lb = self.z_slice_max - self.z_slice_thickness
+                self.z_slice_ub = self.z_slice_max
+            self.display_mode = 'slice'
+        else:
+            if 0 <= (self.z_slice_lb + step) < (self.z_slice_max - self.z_slice_thickness):
+                self.z_slice_lb = self.z_slice_lb + step
+                self.z_slice_ub = self.z_slice_ub + self.z_slice_thickness
+                self.display_mode = 'slice'
+            else:
+                self.display_mode = 'projection'
+        print(self.z_slice_lb, self.z_slice_ub)
 
     def _observe_highlight(self, event):
         if self.highlight:
@@ -237,6 +246,9 @@ class FigurePresenter(Atom):
     def motion(self, event):
         return
 
+    def key_press(self, event):
+        return
+
     def _default_figure(self):
         figure = Figure()
         figure.canvas.mpl_connect('key_press_event', lambda e: self.key_press(e))
@@ -250,7 +262,6 @@ class FigurePresenter(Atom):
         return self.figure.add_axes([0, 0, 1, 1])
 
     def update(self, event=None):
-        self.check_for_changes()
         self.needs_redraw = True
         deferred_call(self.redraw_if_needed)
 
@@ -265,9 +276,6 @@ class FigurePresenter(Atom):
         if self.needs_redraw:
             self.redraw()
             self.needs_redraw = False
-
-    def check_for_changes(self):
-        return
 
 
 class NDImageCollectionPresenter(FigurePresenter):
@@ -383,22 +391,7 @@ class NDImageCollectionPresenter(FigurePresenter):
         pass
 
     def scroll_zaxis(self, step):
-        if self.current_artist.display_mode == 'projection':
-            if step == 'down':
-                z = self.current_artist.z_slice_max
-            else:
-                z = self.current_artist.z_slice_min
-        else:
-            if step == 'down':
-                z = self.current_artist.z_slice - 1
-            else:
-                z = self.current_artist.z_slice + 1
-        lb, ub = self.current_artist.z_slice_min, self.current_artist.z_slice_max
-        if lb <= z <= ub:
-            self.current_artist.display_mode = 'slice'
-            self.current_artist.z_slice = z
-        else:
-            self.current_artist.display_mode = 'projection'
+        self.current_artist.next_z_slice(-1 if step == 'down' else 1)
         self.update()
 
     def scroll(self, event):
@@ -439,10 +432,6 @@ class NDImageCollectionPresenter(FigurePresenter):
 
     def _get_z_max(self):
         return min(a.z_slice_max for a in self.ndimage_artists.values())
-
-    def check_for_changes(self):
-        return
-        #raise NotImplementedError
 
     def set_display_mode(self, display_mode, all_artists=False):
         if all_artists:
@@ -486,8 +475,45 @@ class NDImageCollectionPresenter(FigurePresenter):
         elif self.current_artist is not None:
             self.current_artist.z_slice_ub = z_slice
 
-    def key_press(self, event):
-        raise NotImplementedError
-
     def _observe_current_artist_index(self, event):
         self.current_artist = list(self.ndimage_artists.values())[self.current_artist_index]
+
+
+class StatePersistenceMixin(Atom):
+    '''
+    Mixin that provides basic state persistence
+    '''
+    #: Flag indicating whether there are unsaved changes
+    unsaved_changes = Bool(False)
+
+    #: State as saved to file (used for checking against present state to
+    #: determine if there are unsaved changes)
+    saved_state = Dict()
+
+    def get_full_state(self):
+        return deepcopy({
+            'data': self.obj.get_state(),
+        })
+
+    def save_state(self):
+        state = self.get_full_state()
+        self.reader.save_state(self.obj, state)
+        self.saved_state = state
+
+    def load_state(self):
+        try:
+            state = self.reader.load_state(self.obj)
+            self.obj.set_state(state['data'])
+            self.saved_state = state
+            self.update()
+        except IOError:
+            pass
+
+    def _observe_saved_state(self, event):
+        self.check_for_changes()
+
+    def update(self):
+        raise NotImplementedError
+
+    def check_for_changes(self):
+        self.unsaved_changes = self.saved_state['data'] != self.get_full_state['data']

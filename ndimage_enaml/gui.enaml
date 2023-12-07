@@ -79,78 +79,77 @@ enamldef ChannelConfigPopup(PopupView):
                     presenter.set_channel_max_value(loop_item[0], high_value / 100, display_apply)
 
 
-enamldef DisplayConfig(Container): dc:
+enamldef DisplayConfig(HGroup): dc:
 
     attr presenter
 
-    HGroup:
-        padding = 0
-        align_widths = False
-        trailing_spacer << spacer(0) if display_mode.selected == 'projection' else None
+    padding = 0
+    align_widths = False
+    share_layout = True
+    trailing_spacer << spacer(0) if display_mode.selected == 'projection' else None
 
-        Label: display_label:
-            text = 'Display'
+    Label: display_label:
+        text = 'Display'
 
-        PushButton: channels:
-            text = 'Channels'
-            clicked ::
-                popup = ChannelConfigPopup(self, presenter=presenter)
-                popup.show()
+    PushButton: channels:
+        text = 'Channels'
+        clicked ::
+            popup = ChannelConfigPopup(self, presenter=presenter)
+            popup.show()
 
-        Label: display_as_label:
-            text = 'as'
+    Label: display_as_label:
+        text = 'as'
 
-        ObjectCombo: display_mode:
-            items = ['projection', 'substack', 'slice']
-            selected << presenter.current_artist.display_mode if presenter.current_artist else 'projection'
-            selected ::
-                presenter.set_display_mode(selected)
+    ObjectCombo: display_mode:
+        items = ['projection', 'substack', 'slice']
+        selected << presenter.current_artist.display_mode if (presenter and presenter.current_artist) else 'projection'
+        selected ::
+            presenter.set_display_mode(selected)
 
-        Conditional:
-            condition << display_mode.selected == 'substack'
+    Conditional:
+        condition << display_mode.selected == 'substack'
 
-            DualSlider: dz_slice:
-                tick_interval = 1
-                low_value << presenter.current_artist.z_slice_lb
-                low_value ::
-                    presenter.set_z_slice_lb(low_value)
-                    if dz_constrain.checked:
-                        presenter.set_z_slice_ub(low_value + dz_width.value)
-                high_value << presenter.current_artist.z_slice_ub
-                high_value ::
-                    presenter.set_z_slice_ub(high_value)
-                    if dz_constrain.checked:
-                        presenter.set_z_slice_lb(high_value - dz_width.value)
-                minimum << presenter.current_artist.z_slice_min
-                maximum << presenter.current_artist.z_slice_max
-                tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
+        DualSlider: dz_slice:
+            tick_interval = 1
+            low_value << presenter.current_artist.z_slice_lb
+            low_value ::
+                presenter.set_z_slice_lb(low_value)
+                if dz_constrain.checked:
+                    presenter.set_z_slice_ub(low_value + dz_width.value)
+            high_value << presenter.current_artist.z_slice_ub
+            high_value ::
+                presenter.set_z_slice_ub(high_value)
+                if dz_constrain.checked:
+                    presenter.set_z_slice_lb(high_value - dz_width.value)
+            minimum << presenter.current_artist.z_slice_min
+            maximum << presenter.current_artist.z_slice_max + 1
+            tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
 
-            PushButton: dz_constrain:
-                constraints = [width == 30]
-                checkable = True
-                text << '🔒' if checked else '🔓'
+        PushButton: dz_constrain:
+            constraints = [width == 30]
+            checkable = True
+            text << '🔒' if checked else '🔓'
 
-            IntField: dz_width:
-                constraints = [width == 30]
-                value << presenter.current_artist.z_slice_thickness
-                value ::
-                    center = int(round((dz_slice.high_value + dz_slice.low_value) / 2))
-                    dz_slice.low_value = center - int(np.floor(value / 2))
-                    dz_slice.high_value = center + int(np.ceil(value / 2))
+        IntField: dz_width:
+            constraints = [width == 30]
+            value << presenter.current_artist.z_slice_thickness
+            value ::
+                center = int(round((dz_slice.high_value + dz_slice.low_value) / 2))
+                dz_slice.low_value = center - int(np.floor(value / 2))
+                dz_slice.high_value = center + int(np.ceil(value / 2))
 
+    Conditional:
+        condition << display_mode.selected == 'slice'
 
-        Conditional:
-            condition << display_mode.selected == 'slice'
-
-            Slider: z_slice:
-                tick_interval = 1
-                value << presenter.current_artist.z_slice_lb
-                value ::
-                    presenter.set_z_slice_lb(value)
-                    presenter.set_z_slice_ub(value + 1)
-                minimum << presenter.current_artist.z_slice_min
-                maximum << presenter.current_artist.z_slice_max
-                tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
+        Slider: z_slice:
+            tick_interval = 1
+            value << presenter.current_artist.z_slice_lb
+            value ::
+                presenter.set_z_slice_lb(value)
+                presenter.set_z_slice_ub(value + 1)
+            minimum << presenter.current_artist.z_slice_min
+            maximum << presenter.current_artist.z_slice_max - 1
+            tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
 
 enamldef NDImageDockItem(DockItem): di:
     attr presenter

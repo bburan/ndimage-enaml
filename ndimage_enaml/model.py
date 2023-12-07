@@ -195,6 +195,7 @@ class NDImage(Atom):
 
     @property
     def z_slice_max(self):
+        # This is the maximum z-slice in the image
         return self.image.shape[2]
 
     def get_voxel_size(self, dim):
