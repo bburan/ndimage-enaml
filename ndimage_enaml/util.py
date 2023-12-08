@@ -89,16 +89,23 @@ def get_image(image, *args, **kwargs):
 
 
 def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
-               norm_percentile=99):
+               norm_percentile=99.99):
+
+    # Normalize data before slicing because we need to make sure that the
+    # normalization remains constant when stepping through the slices and/or
+    # substack.
+    ai = 'xyz'.index(axis) + 1
+    img_max =  np.percentile(image.max(axis=ai), norm_percentile, axis=(0, 1, 2), keepdims=True)
+    img_mask = img_max != 0
+
     # z_slice can either be an integer or a slice object.
     if z_slice is not None:
+        # Image is i, x, y z, c where i is index of tile and c is color/channel
         image = image[:, :, :, z_slice, :]
     if image.ndim == 5:
-        image = image.max(axis='xyz'.index(axis) + 1)
+        image = image.max(axis=ai)
 
-    # Normalize data
-    img_max =  np.percentile(image, norm_percentile, axis=(0, 1, 2), keepdims=True)
-    img_mask = img_max != 0
+    # Now do the normalization
     image = np.divide(image, img_max, where=img_mask).clip(0, 1)
     return color_image(image, channel_names, channels)
 
