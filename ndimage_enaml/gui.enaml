@@ -16,11 +16,11 @@ from enaml.stdlib.fields import FloatField, IntField
 from enaml.stdlib.message_box import critical, information, question
 from enaml.qt.QtCore import Qt
 from enaml.widgets.api import (Action, ActionGroup, ButtonGroup, CheckBox,
-                               Container, DockArea, DockItem, DualSlider,
-                               Feature, FileDialogEx, Form, HGroup, Html,
-                               Label, MainWindow, Menu, MenuBar, MPLCanvas,
-                               ObjectCombo, PopupView, ProgressBar, PushButton,
-                               Slider, VGroup, Window)
+                               ColorDialog, Container, DockArea, DockItem,
+                               DualSlider, Feature, FileDialogEx, Form, HGroup,
+                               Html, Label, MainWindow, Menu, MenuBar,
+                               MPLCanvas, ObjectCombo, PopupView, ProgressBar,
+                               PushButton, Slider, VGroup, Window)
 
 
 class NDImageCanvas(MPLCanvas):
@@ -70,12 +70,12 @@ enamldef ChannelConfigPopup(PopupView):
                 checked ::
                     presenter.set_channel_visible(loop_item[0], checked, display_apply)
             PushButton:
-                constraints = [width == 30]
+                constraints = [width == 20]
+                background << loop_item[1].display_color
                 clicked ::
-                    dlg = ColorDialog(current_color=loop_item[1].display_color)
-                    result = dlg.show()
-                    print(result)
-                    print(dlg)
+                    color = ColorDialog.get_color(current_color=loop_item[1].display_color)
+                    if color is not None:
+                        loop_item[1].display_color = color
             DualSlider:
                 minimum = 0
                 maximum = 100

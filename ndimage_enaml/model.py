@@ -20,7 +20,7 @@ CHANNEL_CONFIG = {
 
 
 from atom.api import Atom, Bool, Dict, Float, Int, List, Str, Typed
-from enaml.color import ColorMember
+from enaml.colors import ColorMember
 from matplotlib import transforms as T
 import numpy as np
 from raster_geometry import sphere
@@ -45,13 +45,14 @@ class ChannelConfig(Atom):
         super().__init__(**kwargs)
 
     def as_dict(self):
+        color = '#' + hex(self.display_color.argb & 0xFFFFFF).replace('0x', '').zfill(6)
         return {
             'i': self.i,
             'name': self.name,
             'min_value': self.min_value,
             'max_value': self.max_value,
             'visible': self.visible,
-            'display_color': self.display_color.argb,
+            'display_color': color,
         }
 
 

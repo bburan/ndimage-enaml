@@ -116,6 +116,7 @@ class NDImagePlot(Atom):
             config.observe('visible', self.request_redraw)
             config.observe('min_value', self.request_redraw)
             config.observe('max_value', self.request_redraw)
+            config.observe('display_color', self.request_redraw)
         ndimage.observe('extent', self.request_redraw)
 
     def next_z_slice(self, step):
