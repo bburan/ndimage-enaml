@@ -169,3 +169,14 @@ def project_image(image, channel_names, padding=2):
 
     tiled_image = color_image(tiled_image, channel_names)
     return tiled_image.swapaxes(0, 1)
+
+
+def expand_path(x, y, width):
+    v = x + y * 1j
+    a = np.angle(np.diff(v)) + np.pi / 2
+    a = np.pad(a, (1, 0), mode='edge')
+    dx = width * np.cos(a)
+    dy = width * np.sin(a)
+    x = np.linspace(x - dx, x + dx, 100)
+    y = np.linspace(y - dy, y + dy, 100)
+    return x, y
