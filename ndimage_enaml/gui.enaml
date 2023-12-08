@@ -52,22 +52,30 @@ enamldef ChannelConfigPopup(PopupView):
     Container:
         layout_constraints => ():
             widgets = self.visible_widgets()
-            cb = widgets[::2]
-            slider = widgets[1::2]
-            constraints = [vbox(*[hbox(c, s) for c, s in zip(cb, slider)])]
-            constraints.append(align('left', *slider))
+            cb = widgets[::3]
+            pb = widgets[1::3]
+            slider = widgets[2::3]
+            constraints = [vbox(*[hbox(c, p, s) for c, p, s in zip(cb, pb, slider)])]
             constraints.append(align('left', *cb))
+            constraints.append(align('left', *pb))
+            constraints.append(align('left', *slider))
             return constraints
 
         Looper:
             iterable << presenter.current_artist.channel_config.items() \
                 if presenter.current_artist is not None else {}
-
             CheckBox:
                 text = loop_item[0]
                 checked << loop_item[1].visible
                 checked ::
                     presenter.set_channel_visible(loop_item[0], checked, display_apply)
+            PushButton:
+                constraints = [width == 30]
+                clicked ::
+                    dlg = ColorDialog(current_color=loop_item[1].display_color)
+                    result = dlg.show()
+                    print(result)
+                    print(dlg)
             DualSlider:
                 minimum = 0
                 maximum = 100
