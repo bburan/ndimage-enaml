@@ -82,6 +82,7 @@ enamldef ChannelConfigPopup(PopupView):
 enamldef DisplayConfig(HGroup): dc:
 
     attr presenter
+    alias display_mode: dm.selected
 
     padding = 0
     align_widths = False
@@ -99,7 +100,7 @@ enamldef DisplayConfig(HGroup): dc:
     Label: display_as_label:
         text = 'as'
 
-    ObjectCombo: display_mode:
+    ObjectCombo: dm:
         items = ['projection', 'slice']
         selected << presenter.current_artist.display_mode if (presenter and presenter.current_artist) else 'projection'
         selected ::
@@ -107,7 +108,7 @@ enamldef DisplayConfig(HGroup): dc:
 
     DualSlider: dz_slice:
         tick_interval = 1
-        enabled << display_mode.selected == 'slice'
+        enabled << display_mode == 'slice'
         low_value := presenter.current_artist.z_slice_lb
         high_value := presenter.current_artist.z_slice_ub
         minimum << presenter.current_artist.z_slice_min
