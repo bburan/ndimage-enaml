@@ -214,7 +214,7 @@ class NDImagePlot(Atom):
         self.ndimage.extent = extent.tolist()
 
     @observe("z_slice_lb", "z_slice_ub", "display_mode", "alpha", "highlight")
-    def request_redraw(self, event=False):
+    def request_redraw(self, event=None):
         self.needs_redraw = True
         deferred_call(self.redraw_if_needed)
 
@@ -297,11 +297,7 @@ class FigurePresenter(Atom):
     def _default_axes(self):
         return self.figure.add_axes([0, 0, 1, 1])
 
-    def update(self, event=None):
-        self.needs_redraw = True
-        deferred_call(self.redraw_if_needed)
-
-    def request_redraw(self):
+    def request_redraw(self, event=None):
         self.needs_redraw = True
         deferred_call(self.redraw_if_needed)
 
@@ -359,9 +355,8 @@ class NDImageCollectionPresenter(FigurePresenter):
         self.ndimage_artists = {
             t.source: NDImagePlot(self.axes, t, auto_rotate=self.rotate_ndimage) for t in self.obj
         }
-
         for artist in self.ndimage_artists.values():
-            artist.observe('updated', self.update)
+            artist.observe('updated', self.request_redraw)
 
         # Needs to be set to force a change notification that sets the current
         # artist.
@@ -371,7 +366,6 @@ class NDImageCollectionPresenter(FigurePresenter):
         # We need to set them back to what we want.
         self.axes.axis('equal')
         self.axes.axis(self.obj.get_image_extent())
-        #self.load_state()
 
     ###################################################################################
     # Code for handling events from Matplotlib
@@ -402,7 +396,7 @@ class NDImageCollectionPresenter(FigurePresenter):
         self.axes.set_xlim(self.pan_xlim)
         self.axes.set_ylim(self.pan_ylim)
         self.pan_performed = True
-        self.update()
+        self.request_redraw()
 
     def end_pan(self, event):
         self.pan_event = None
@@ -428,7 +422,7 @@ class NDImageCollectionPresenter(FigurePresenter):
 
     def scroll_zaxis(self, step):
         self.current_artist.next_z_slice(-1 if step == 'down' else 1)
-        self.update()
+        self.request_redraw()
 
     def scroll(self, event):
         if event.xdata is None:
@@ -461,7 +455,7 @@ class NDImageCollectionPresenter(FigurePresenter):
         new_ylim = [ydata - yfrac * new_yrange, ydata + (1 - yfrac) * new_yrange]
         self.axes.set_xlim(new_xlim)
         self.axes.set_ylim(new_ylim)
-        self.update()
+        self.request_redraw()
 
     def _get_z_min(self):
         return min(a.z_slice_min for a in self.ndimage_artists.values())
@@ -526,6 +520,12 @@ class StatePersistenceMixin(Atom):
     #: determine if there are unsaved changes)
     saved_state = Dict()
 
+    def _default_saved_state(self):
+        return self.get_full_state()
+
+    def _observe_saved_state(self, event):
+        self.check_for_changes()
+
     def get_full_state(self):
         return deepcopy({
             'data': self.obj.get_state(),
@@ -535,21 +535,22 @@ class StatePersistenceMixin(Atom):
         state = self.get_full_state()
         self.reader.save_state(self.obj, state)
         self.saved_state = state
+        self.update_state()
 
     def load_state(self):
         try:
             state = self.reader.load_state(self.obj)
             self.obj.set_state(state['data'])
             self.saved_state = state
-            self.update()
+            self.update_state()
         except IOError:
             pass
 
     def _observe_saved_state(self, event):
         self.check_for_changes()
 
-    def update(self):
-        raise NotImplementedError
+    def update_state(self, event=None):
+        self.check_for_changes()
 
     def check_for_changes(self):
-        self.unsaved_changes = self.saved_state['data'] != self.get_full_state['data']
+        self.unsaved_changes = self.saved_state['data'] != self.get_full_state()['data']
