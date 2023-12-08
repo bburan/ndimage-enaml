@@ -1,6 +1,24 @@
 import logging
 log = logging.getLogger(__name__)
 
+
+CHANNEL_CONFIG = {
+    'CtBP2': { 'display_color': '#FF0000'},
+    'MyosinVIIa': {'display_color': '#0000FF'},
+    'GluR2': {'display_color': '#00FF00'},
+    'GlueR2': {'display_color': '#00FF00'},
+    'PMT': {'display_color': '#FFFFFF'},
+    'DAPI': {'display_color': '#FFFFFF'},
+
+    # Channels are tagged as unknown if there's difficulty parsing the channel
+    # information from the file.
+    'Unknown 1': {'display_color': '#FF0000'},
+    'Unknown 2': {'display_color': '#00FF00'},
+    'Unknown 3': {'display_color': '#0000FF'},
+    'Unknown 4': {'display_color': '#FFFFFF'},
+}
+
+
 from atom.api import Atom, Bool, Dict, Float, Int, List, Str, Typed
 from matplotlib import transforms as T
 import numpy as np
@@ -14,9 +32,26 @@ from . import util
 class ChannelConfig(Atom):
 
     name = Str()
+    i = Int()
     min_value = Float(0)
     max_value = Float(1)
     visible = Bool(True)
+    display_color = Str()
+
+    def __init__(self, **kwargs):
+        members = self.members()
+        kwargs = {k: v for k, v in kwargs.items() if k in members}
+        super().__init__(**kwargs)
+
+    def as_dict(self):
+        return {
+            'i': self.i,
+            'name': self.name,
+            'min_value': self.min_value,
+            'max_value': self.max_value,
+            'visible': self.visible,
+            'display_color': self.display_color,
+        }
 
 
 class NDImage(Atom):
@@ -31,6 +66,7 @@ class NDImage(Atom):
     extent = List()
     n_channels = Int()
     source = Str()
+    channel_config = Dict()
 
     def __init__(self, info, image):
         self.info = info
@@ -46,6 +82,20 @@ class NDImage(Atom):
         zub = zlb + zpx * zv
         self.extent = [xlb, xub, ylb, yub, zlb, zub]
         self.n_channels = self.image.shape[-1]
+
+        channel_config = {}
+        unknown = 0
+        for i, c in enumerate(self.info['channels']):
+            name = c['name']
+            if name not in CHANNEL_CONFIG:
+                config = CHANNEL_CONFIG[f'Unknown {unknown+1}'].copy()
+                unknown += 1
+            else:
+                config = CHANNEL_CONFIG[name].copy()
+            config.update(c)
+            config['i'] = i
+            channel_config[name] = config
+        self.channel_config = channel_config
 
     @property
     def channel_names(self):
@@ -145,9 +195,17 @@ class NDImage(Atom):
 
     def get_image(self, channels=None, z_slice=None, axis='z',
                   norm_percentile=99):
-        return util.get_image(self.image, channel_names=self.channel_names,
-                              channels=channels, z_slice=z_slice, axis=axis,
-                              norm_percentile=norm_percentile)
+
+        if isinstance(channels, str):
+            channels = [channels]
+        channel_config = []
+        for c in channels:
+            if isinstance(c, ChannelConfig):
+                channel_config.append(c.as_dict())
+            else:
+                channel_config.append(self.channel_config[c])
+        return util.get_image(self.image, channel_config, z_slice=z_slice,
+                              axis=axis, norm_percentile=norm_percentile)
 
     def get_state(self):
         return {"extent": self.extent}

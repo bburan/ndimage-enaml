@@ -111,7 +111,7 @@ class NDImagePlot(Atom):
         self.z_slice_max = self.ndimage.z_slice_max
         self.shift = self.ndimage.get_voxel_size('x') * 5
 
-        self.channel_config = {c: ChannelConfig(name=c) for c in ndimage.channel_names}
+        self.channel_config = {n: ChannelConfig(**c) for n, c in ndimage.channel_config.items()}
         for config in self.channel_config.values():
             config.observe('visible', self.request_redraw)
             config.observe('min_value', self.request_redraw)
