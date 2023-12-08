@@ -109,7 +109,6 @@ class NDImagePlot(Atom):
         self.rectangle.set_alpha(0)
         self.axes.add_patch(self.rectangle)
         self.z_slice_max = self.ndimage.z_slice_max
-        self.z_slice_lb = self.ndimage.z_slice_max // 2
         self.shift = self.ndimage.get_voxel_size('x') * 5
 
         self.channel_config = {c: ChannelConfig(name=c) for c in ndimage.channel_names}
