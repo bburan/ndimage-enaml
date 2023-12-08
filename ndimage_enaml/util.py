@@ -89,7 +89,7 @@ def get_image(image, *args, **kwargs):
 
 
 def _get_image(image, channel_names=None, channels=None, z_slice=None, axis='z',
-               norm_percentile=99.99):
+               norm_percentile=99):
 
     # Normalize data before slicing because we need to make sure that the
     # normalization remains constant when stepping through the slices and/or
