@@ -32,7 +32,8 @@ class NDImageCanvas(MPLCanvas):
 
 
 def bind_focus(items, cb):
-    observe = ['toggled', 'selected', 'value', 'clicked']
+    observe = ('toggled', 'selected', 'value', 'clicked', 'low_value',
+               'high_value')
     for item in items:
         for o in observe:
             if hasattr(item, o):
