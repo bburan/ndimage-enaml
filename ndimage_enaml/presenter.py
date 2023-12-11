@@ -133,6 +133,18 @@ class NDImagePlot(Atom):
             else:
                 self.display_mode = 'projection'
 
+    def center_z_substack(self, z):
+        thickness = self.z_slice_thickness
+        z_max = self.z_slice_max
+
+        self.z_slice_update.set()
+        lb = np.clip(z - np.floor(thickness / 2), 0, z_max)
+        ub = np.clip(z + np.ceil(thickness / 2), 0, z_max)
+        print(z, lb, ub)
+        self.z_slice_lb = int(lb)
+        self.z_slice_ub = int(ub)
+        self.z_slice_update.clear()
+
     @observe('z_slice_lb', 'z_slice_ub', 'z_slice_thickness')
     def _update_z(self, event):
         # Skip if we're in the process of updating the details
