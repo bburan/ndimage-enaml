@@ -96,42 +96,45 @@ enamldef DisplayConfig(HGroup): dc:
     align_widths = False
     share_layout = True
 
-    Label: display_label:
-        text = 'Display'
+    Conditional:
+        condition << dc.presenter.current_artist is not None
 
-    PushButton: channels:
-        text = 'Channels'
-        clicked ::
-            popup = ChannelConfigPopup(self, presenter=presenter)
-            popup.show()
+        Label: display_label:
+            text = 'Display'
 
-    Label: display_as_label:
-        text = 'as'
+        PushButton: channels:
+            text = 'Channels'
+            clicked ::
+                popup = ChannelConfigPopup(self, presenter=presenter)
+                popup.show()
 
-    ObjectCombo: dm:
-        items = ['projection', 'slice']
-        selected << presenter.current_artist.display_mode if (presenter and presenter.current_artist) else 'projection'
-        selected ::
-            presenter.set_display_mode(selected)
+        Label: display_as_label:
+            text = 'as'
 
-    DualSlider: dz_slice:
-        tick_interval = 1
-        enabled << display_mode == 'slice'
-        low_value := presenter.current_artist.z_slice_lb
-        high_value := presenter.current_artist.z_slice_ub
-        minimum << presenter.current_artist.z_slice_min
-        maximum << presenter.current_artist.z_slice_max
-        tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
+        ObjectCombo: dm:
+            items = ['projection', 'slice']
+            selected << presenter.current_artist.display_mode
+            selected ::
+                presenter.set_display_mode(selected)
 
-    PushButton: dz_constrain:
-        constraints = [width == 30]
-        checkable = True
-        checked := presenter.current_artist.constrain_z_slice_thickness
-        text << '🔒' if checked else '🔓'
+        DualSlider: dz_slice:
+            tick_interval = 1
+            enabled << dm.selected == 'slice'
+            low_value := dc.presenter.current_artist.z_slice_lb
+            high_value := dc.presenter.current_artist.z_slice_ub
+            minimum << dc.presenter.current_artist.z_slice_min
+            maximum << dc.presenter.current_artist.z_slice_max
+            tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
 
-    IntField: dz_width:
-        constraints = [width == 30]
-        value := presenter.current_artist.z_slice_thickness
+        PushButton: dz_constrain:
+            constraints = [width == 30]
+            checkable = True
+            checked := presenter.current_artist.constrain_z_slice_thickness
+            text << '🔒' if checked else '🔓'
+
+        IntField: dz_width:
+            constraints = [width == 30]
+            value := presenter.current_artist.z_slice_thickness
 
 
 enamldef NDImageDockItem(DockItem): di:
