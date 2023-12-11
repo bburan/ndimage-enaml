@@ -95,9 +95,8 @@ class NDImagePlot(Atom):
         self.display_channels = state["display_channels"]
         self.shift = state["shift"]
 
-    def __init__(self, axes, ndimage, **kwargs):
+    def __init__(self, axes, ndimage=None, **kwargs):
         super().__init__(**kwargs)
-        self.ndimage = ndimage
         self.axes = axes
         self.axes.set_axis_off()
         self.rotation_transform = T.Affine2D()
@@ -108,8 +107,18 @@ class NDImagePlot(Atom):
         self.rectangle = mp.patches.Rectangle((0, 0), 0, 0, ec='red', fc='None', zorder=5000, transform=self.transform)
         self.rectangle.set_alpha(0)
         self.axes.add_patch(self.rectangle)
-        self.z_slice_max = self.ndimage.z_slice_max
-        self.shift = self.ndimage.get_voxel_size('x') * 5
+        self.axes.axis('equal')
+
+        if ndimage is not None:
+            self.ndimage = ndimage
+
+    def _observe_ndimage(self, event):
+        if event.get('oldvalue', None) is not None:
+            event['oldvalue'].unobserve('extent', self.request_redraw)
+
+        ndimage = event['value']
+        self.z_slice_max = ndimage.z_slice_max
+        self.shift = ndimage.get_voxel_size('x') * 5
 
         self.channel_config = {n: ChannelConfig(**c) for n, c in ndimage.channel_config.items()}
         for config in self.channel_config.values():
