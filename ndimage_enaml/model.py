@@ -56,6 +56,34 @@ class ChannelConfig(Atom):
         }
 
 
+def make_channel_config(info):
+    channel_config = {}
+    unknown = 0
+    for i, c in enumerate(info['channels']):
+        name = c['name']
+        if name not in CHANNEL_CONFIG:
+            config = CHANNEL_CONFIG[f'Unknown {unknown+1}'].copy()
+            unknown += 1
+        else:
+            config = CHANNEL_CONFIG[name].copy()
+        config.update(c)
+        config['i'] = i
+        channel_config[name] = config
+    return channel_config
+
+
+def get_channel_config(channels, channel_config):
+    if isinstance(channels, str):
+        channels = [channels]
+    config = []
+    for c in channels:
+        if isinstance(c, ChannelConfig):
+            config.append(c.as_dict())
+        else:
+            config.append(channel_config[c])
+    return config
+
+
 class NDImage(Atom):
 
     #: Should be a dictionary containing the following keys:
@@ -84,20 +112,7 @@ class NDImage(Atom):
         zub = zlb + zpx * zv
         self.extent = [xlb, xub, ylb, yub, zlb, zub]
         self.n_channels = self.image.shape[-1]
-
-        channel_config = {}
-        unknown = 0
-        for i, c in enumerate(self.info['channels']):
-            name = c['name']
-            if name not in CHANNEL_CONFIG:
-                config = CHANNEL_CONFIG[f'Unknown {unknown+1}'].copy()
-                unknown += 1
-            else:
-                config = CHANNEL_CONFIG[name].copy()
-            config.update(c)
-            config['i'] = i
-            channel_config[name] = config
-        self.channel_config = channel_config
+        self.channel_config = make_channel_config(info)
 
     @property
     def channel_names(self):
@@ -195,17 +210,14 @@ class NDImage(Atom):
     def get_rotation(self):
         return self.info.get('rotation', 0)
 
+    def get_channel_config(self, channels=None):
+        if channels is None:
+            channels = self.channel_names
+        return get_channel_config(channels, self.channel_config)
+
     def get_image(self, channels=None, z_slice=None, axis='z',
                   norm_percentile=99):
-
-        if isinstance(channels, str):
-            channels = [channels]
-        channel_config = []
-        for c in channels:
-            if isinstance(c, ChannelConfig):
-                channel_config.append(c.as_dict())
-            else:
-                channel_config.append(self.channel_config[c])
+        channel_config = get_channel_config(channels, self.channel_config)
         return util.get_image(self.image, channel_config, z_slice=z_slice,
                               axis=axis, norm_percentile=norm_percentile)
 
