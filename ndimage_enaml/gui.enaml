@@ -137,15 +137,19 @@ enamldef DisplayConfig(HGroup): dc:
             value := presenter.current_artist.z_slice_thickness
 
 
-enamldef NDImageDockItem(DockItem): di:
+enamldef NDImageContainer(Container): container:
     attr presenter
+    initialized ::
+        deferred_call(bind_focus, container.children, canvas.set_focus)
+        deferred_call(canvas.set_focus)
+    DisplayConfig:
+        presenter << di.presenter
+    NDImageCanvas: canvas:
+        figure << di.presenter.figure
 
+
+enamldef NDImageDockItem(DockItem): di:
+    alias presenter: container.presenter
     closable = False
-    Container: container:
-        initialized ::
-            deferred_call(bind_focus, container.children, canvas.set_focus)
-            deferred_call(canvas.set_focus)
-        DisplayConfig:
-            presenter << di.presenter
-        NDImageCanvas: canvas:
-            figure << di.presenter.figure
+    NDImageContainer:
+        pass
