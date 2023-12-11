@@ -307,7 +307,7 @@ class FigurePresenter(Atom):
         return
 
     def _default_figure(self):
-        figure = Figure()
+        figure = Figure(facecolor='black')
         figure.canvas.mpl_connect('key_press_event', lambda e: self.key_press(e))
         figure.canvas.mpl_connect('button_press_event', lambda e: self.button_press(e))
         figure.canvas.mpl_connect('button_release_event', lambda e: self.button_release(e))
