@@ -149,7 +149,6 @@ class NDImagePlot(Atom):
         self.z_slice_update.set()
         lb = np.clip(z - np.floor(thickness / 2), 0, z_max)
         ub = np.clip(z + np.ceil(thickness / 2), 0, z_max)
-        print(z, lb, ub)
         self.z_slice_lb = int(lb)
         self.z_slice_ub = int(ub)
         self.z_slice_update.clear()
