@@ -147,12 +147,12 @@ enamldef NDImageContainer(Container): container:
             deferred_call(bind_focus, container.children, canvas.set_focus)
             deferred_call(canvas.set_focus)
     DisplayConfig:
-        presenter << di.presenter
+        presenter << container.presenter
     NDImageCanvas: canvas:
-        figure << di.presenter.figure
+        figure << container.presenter.figure
 
 
-enamldef NDImageDockItem(DockItem): di:
+enamldef NDImageDockItem(DockItem):
     alias presenter: container.presenter
     closable = False
     NDImageContainer: container:
