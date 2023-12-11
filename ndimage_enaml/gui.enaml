@@ -140,9 +140,12 @@ enamldef DisplayConfig(HGroup): dc:
 
 enamldef NDImageContainer(Container): container:
     attr presenter
+    attr focus_canvas = True
+
     initialized ::
-        deferred_call(bind_focus, container.children, canvas.set_focus)
-        deferred_call(canvas.set_focus)
+        if focus_canvas:
+            deferred_call(bind_focus, container.children, canvas.set_focus)
+            deferred_call(canvas.set_focus)
     DisplayConfig:
         presenter << di.presenter
     NDImageCanvas: canvas:
