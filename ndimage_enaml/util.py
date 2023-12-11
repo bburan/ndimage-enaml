@@ -3,9 +3,16 @@ import numpy as np
 
 
 LABEL_CONFIG = {
-    'artifact': 'maroon',
-    'selected': 'white',
-    'orphan': 'mediumseagreen',
+    'artifact': {
+        'display_color': '#FF0000',
+    },
+    'selected': {
+        'display_color': 'white',
+        'border_expand': 2,
+    },
+    'orphan': {
+        'display_color': '#00FF00',
+    },
 }
 
 
@@ -78,22 +85,26 @@ def tile_images(images, n_cols=15, padding=2, classifiers=None):
         classifiers = {}
 
     for label, indices in classifiers.items():
-        color = LABEL_CONFIG.get(label, 'white')
+        config = LABEL_CONFIG.get(label, {})
+        color = config.get('display_color', 'white')
+        expand = config.get('border_expand', 1)
         rgb = colors.to_rgba(color)[:3]
         for i in indices:
             col = i % n_cols
             row = i // n_cols
-            xlb = (xs + padding) * col + padding - 1
-            ylb = (ys + padding) * row + padding - 1
-            tiled_image[xlb, ylb:ylb+ys+1, :] = rgb
-            tiled_image[xlb+xs+1, ylb:ylb+ys+1, :] = rgb
-            tiled_image[xlb:xlb+xs+1, ylb, :] = rgb
-            tiled_image[xlb:xlb+xs+2, ylb+ys+1, :] = rgb
+            xlb = (xs + padding) * col + padding - expand
+            ylb = (ys + padding) * row + padding - expand
+            xub = (xs + padding) * col + padding + xs + (expand - 1)
+            yub = (ys + padding) * row + padding + ys + (expand - 1)
+            tiled_image[xlb, ylb:yub+1, :] = rgb
+            tiled_image[xub, ylb:yub+1, :] = rgb
+            tiled_image[xlb:xub+1, ylb, :] = rgb
+            tiled_image[xlb:xub+1, yub, :] = rgb
 
     return tiled_image
 
 
-def project_image(image, channel_names, padding=2):
+def project_image(image, channel_names, padding=1):
     xs, ys, zs, cs = image.shape
     y_size = xs + ys + padding * 2 + padding
     x_size = (xs + ys + padding * 2) * cs + padding
@@ -101,10 +112,13 @@ def project_image(image, channel_names, padding=2):
 
     for i in range(cs):
         t = image[..., i] / 255
+
         x_proj = t.max(axis=0)
         y_proj = t.max(axis=1)
         z_proj = t.max(axis=2)
+
         xo = i * (xs + ys + padding * 2) + padding
+
         yo = padding
         zxo = xo
         zyo = yo
@@ -112,6 +126,7 @@ def project_image(image, channel_names, padding=2):
         xyo = yo
         yxo = xo
         yyo = yo + ys + padding
+
         tiled_image[zxo:zxo+xs, zyo:zyo+ys, i] = z_proj
         tiled_image[xxo:xxo+xs, xyo:xyo+ys, i] = x_proj.T
         tiled_image[yxo:yxo+ys, yyo:yyo+ys, i] = y_proj
