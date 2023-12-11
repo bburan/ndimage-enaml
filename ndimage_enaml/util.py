@@ -104,7 +104,7 @@ def tile_images(images, n_cols=15, padding=2, classifiers=None):
     return tiled_image
 
 
-def project_image(image, channel_names, padding=1):
+def project_image(image, channel_config, padding=1):
     xs, ys, zs, cs = image.shape
     y_size = xs + ys + padding * 2 + padding
     x_size = (xs + ys + padding * 2) * cs + padding
@@ -131,7 +131,7 @@ def project_image(image, channel_names, padding=1):
         tiled_image[xxo:xxo+xs, xyo:xyo+ys, i] = x_proj.T
         tiled_image[yxo:yxo+ys, yyo:yyo+ys, i] = y_proj
 
-    tiled_image = color_image(tiled_image, channel_names)
+    tiled_image = color_image(tiled_image, channel_config)
     return tiled_image.swapaxes(0, 1)
 
 
