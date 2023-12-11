@@ -151,5 +151,5 @@ enamldef NDImageContainer(Container): container:
 enamldef NDImageDockItem(DockItem): di:
     alias presenter: container.presenter
     closable = False
-    NDImageContainer:
+    NDImageContainer: container:
         pass
