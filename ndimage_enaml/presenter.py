@@ -129,6 +129,9 @@ class NDImagePlot(Atom):
         ndimage.observe('extent', self.request_redraw)
 
     def next_z_slice(self, step):
+        old_value = self.constrain_z_slice_thickness
+        with self.suppress_notifications():
+            self.constrain_z_slice_thickness = True
         if self.display_mode == 'projection':
             if step > 0:
                 self.z_slice_lb = 0
@@ -141,6 +144,8 @@ class NDImagePlot(Atom):
                 self.display_mode = 'slice'
             else:
                 self.display_mode = 'projection'
+        with self.suppress_notifications():
+            self.constrain_z_slice_thickness = old_value
 
     def center_z_substack(self, z):
         thickness = self.z_slice_thickness
