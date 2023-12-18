@@ -110,8 +110,9 @@ def project_image(image, channel_config, padding=1):
     x_size = (xs + ys + padding * 2) * cs + padding
     tiled_image = np.full((x_size, y_size, 3), 0.0)
 
+    max_value = np.iinfo(image.dtype).max
     for i in range(cs):
-        t = image[..., i] / 255
+        t = image[..., i] / max_value
 
         x_proj = t.max(axis=0)
         y_proj = t.max(axis=1)
