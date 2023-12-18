@@ -567,7 +567,10 @@ class StatePersistenceMixin(Atom):
         try:
             state = self.reader.load_state(self.obj)
             self.obj.set_state(state['data'])
-            self.saved_state = state
+            # This ensures that any new additions to the state that were not in
+            # the saved file get pulled back in for making comparisions to the
+            # state (e.g., new keywords in the state dictionary).
+            self.saved_state = self.get_full_state()
             self.update_state()
         except IOError:
             pass
