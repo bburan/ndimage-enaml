@@ -54,8 +54,7 @@ class NDImagePlot(Atom):
     z_slice = Property()
     z_slice_lb = Int(0)
     z_slice_ub = Int(1)
-    z_slice_thickness = Int(1)
-    constrain_z_slice_thickness = Bool(True)
+    z_slice_thickness = Property()
     z_slice_min = Int(0)
     z_slice_max = Int(0)
     shift = Float()
@@ -71,13 +70,11 @@ class NDImagePlot(Atom):
     updated = Event()
     needs_redraw = Bool(False)
 
-    z_slice_update = Value()
-
     def _get_visible_channels(self):
         return [c.name for c in self.channel_config.values() if c.visible]
 
-    def _default_z_slice_update(self):
-        return threading.Event()
+    def _get_z_slice_thickness(self):
+        return self.z_slice_ub - self.z_slice_lb
 
     def get_state(self):
         return {
@@ -129,81 +126,32 @@ class NDImagePlot(Atom):
         ndimage.observe('extent', self.request_redraw)
 
     def next_z_slice(self, step):
-        old_value = self.constrain_z_slice_thickness
-        with self.suppress_notifications():
-            self.constrain_z_slice_thickness = True
+        # Stash the value since it's automatically computed from the
+        # lower/upper limits and we want to keep the thickness the same in this
+        # method.
+        thickness = self.z_slice_thickness
         if self.display_mode == 'projection':
             if step > 0:
                 self.z_slice_lb = 0
             else:
-                self.z_slice_lb = self.z_slice_max - self.z_slice_thickness
+                self.z_slice_lb = self.z_slice_max - thickness
             self.display_mode = 'slice'
         else:
-            if 0 <= (self.z_slice_lb + step) <= (self.z_slice_max - self.z_slice_thickness):
+            if 0 <= (self.z_slice_lb + step) <= (self.z_slice_max - thickness):
                 self.z_slice_lb += step
                 self.display_mode = 'slice'
             else:
                 self.display_mode = 'projection'
-        with self.suppress_notifications():
-            self.constrain_z_slice_thickness = old_value
+        self.z_slice_ub = self.z_slice_lb + thickness
 
     def center_z_substack(self, z):
         thickness = self.z_slice_thickness
         z_max = self.z_slice_max
 
-        self.z_slice_update.set()
         lb = np.clip(z - np.floor(thickness / 2), 0, z_max)
         ub = np.clip(z + np.ceil(thickness / 2), 0, z_max)
         self.z_slice_lb = int(lb)
         self.z_slice_ub = int(ub)
-        self.z_slice_update.clear()
-
-    @observe('z_slice_lb', 'z_slice_ub', 'z_slice_thickness')
-    def _update_z(self, event):
-        # Skip if we're in the process of updating the details
-        if self.z_slice_update.is_set():
-            return
-        self.z_slice_update.set()
-
-        lb, ub = self.z_slice_lb, self.z_slice_ub
-        constrain = self.constrain_z_slice_thickness
-        thickness = self.z_slice_thickness
-        name = event['name']
-        z_max = self.z_slice_max
-
-        if thickness < 1:
-            thickness = 1
-
-        if constrain and name == 'z_slice_lb':
-            ub = lb + thickness
-        elif constrain and name == 'z_slice_ub':
-            lb = ub - thickness
-        elif name == 'z_slice_thickness':
-            if thickness > z_max:
-                thickness = z_max
-            ub = lb + thickness
-        if lb == ub:
-            ub = lb + 1
-        if lb < 0:
-            lb = 0
-            ub = lb + thickness
-        if ub > z_max:
-            lb = z_max - thickness
-            ub = z_max
-        thickness = ub - lb
-
-        # By deferring this update, we ensure that the slider is properly
-        # updated rather than staying at the last value forced by the user.
-        def update_z():
-            nonlocal self
-            nonlocal lb
-            nonlocal ub
-            nonlocal thickness
-            self.z_slice_lb = lb
-            self.z_slice_ub = ub
-            self.z_slice_thickness = thickness
-            self.z_slice_update.clear()
-        deferred_call(update_z)
 
     def _observe_highlight(self, event):
         if self.highlight:

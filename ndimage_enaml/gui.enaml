@@ -127,16 +127,6 @@ enamldef DisplayConfig(HGroup): dc:
             maximum << dc.presenter.current_artist.z_slice_max
             tool_tip = 'Use up and down arrow keys when counting cells to scroll through z-steps'
 
-        PushButton: dz_constrain:
-            constraints = [width == 30]
-            checkable = True
-            checked := presenter.current_artist.constrain_z_slice_thickness
-            text << '🔒' if checked else '🔓'
-
-        IntField: dz_width:
-            constraints = [width == 30]
-            value := presenter.current_artist.z_slice_thickness
-
 
 enamldef NDImageContainer(Container): container:
     attr presenter
