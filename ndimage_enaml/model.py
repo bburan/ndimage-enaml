@@ -2,23 +2,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-CHANNEL_CONFIG = {
-    'CtBP2': { 'display_color': '#FF0000'},
-    'MyosinVIIa': {'display_color': '#0000FF'},
-    'GluR2': {'display_color': '#00FF00'},
-    'GlueR2': {'display_color': '#00FF00'},
-    'PMT': {'display_color': '#FFFFFF'},
-    'DAPI': {'display_color': '#FFFFFF'},
-
-    # Channels are tagged as unknown if there's difficulty parsing the channel
-    # information from the file.
-    'Unknown 1': {'display_color': '#FF0000'},
-    'Unknown 2': {'display_color': '#00FF00'},
-    'Unknown 3': {'display_color': '#0000FF'},
-    'Unknown 4': {'display_color': '#FFFFFF'},
-}
-
-
 from atom.api import Atom, Bool, Dict, Float, Int, List, Str, Typed
 from enaml.colors import ColorMember
 from matplotlib import transforms as T
@@ -56,16 +39,16 @@ class ChannelConfig(Atom):
         }
 
 
-def make_channel_config(info):
+def make_channel_config(info, defaults):
     channel_config = {}
     unknown = 0
     for i, c in enumerate(info['channels']):
         name = c['name']
-        if name not in CHANNEL_CONFIG:
-            config = CHANNEL_CONFIG[f'Unknown {unknown+1}'].copy()
+        if name not in defaults:
+            config = defaults[f'Unknown {unknown+1}'].copy()
             unknown += 1
         else:
-            config = CHANNEL_CONFIG[name].copy()
+            config = defaults[name].copy()
         config.update(c)
         config['i'] = i
         channel_config[name] = config
@@ -98,6 +81,12 @@ class NDImage(Atom):
     source = Str()
     channel_config = Dict()
 
+    # This shoudl be a mapping of channel name to a dictionary containing
+    # default values that will be set in ChannelConfig (e.g., display_color,
+    # visible, min_value, max_value, etc.). Any attribute specified by
+    # `ChannelConfig` can be specified here.
+    channel_defaults = Dict()
+
     def __init__(self, info, image):
         self.info = info
         self.image = image
@@ -112,7 +101,7 @@ class NDImage(Atom):
         zub = zlb + zpx * zv
         self.extent = [xlb, xub, ylb, yub, zlb, zub]
         self.n_channels = self.image.shape[-1]
-        self.channel_config = make_channel_config(info)
+        self.channel_config = make_channel_config(info, self.channel_defaults)
 
     @property
     def channel_names(self):
