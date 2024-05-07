@@ -87,7 +87,8 @@ class NDImage(Atom):
     # `ChannelConfig` can be specified here.
     channel_defaults = Dict()
 
-    def __init__(self, info, image):
+    def __init__(self, info, image, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.info = info
         self.image = image
         xlb, ylb, zlb = self.info["lower"][:3]
@@ -339,4 +340,5 @@ class NDImageCollection(Atom):
                 if t_base.info[k] != t.info[k]:
                     raise ValueError(f'Cannot merge tiles. {k} differs.')
             info[k] = t_base.info[k]
-        return NDImage(info, merged_image)
+        return NDImage(info, merged_image,
+                       channel_defaults=self.tiles[0].channel_defaults)
