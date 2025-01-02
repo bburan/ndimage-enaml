@@ -81,7 +81,7 @@ class NDImage(Atom):
     source = Str()
     channel_config = Dict()
 
-    # This shoudl be a mapping of channel name to a dictionary containing
+    # This should be a mapping of channel name to a dictionary containing
     # default values that will be set in ChannelConfig (e.g., display_color,
     # visible, min_value, max_value, etc.). Any attribute specified by
     # `ChannelConfig` can be specified here.
