@@ -131,6 +131,10 @@ enamldef DisplayConfig(HGroup): dc:
 enamldef NDImageContainer(Container): container:
     attr presenter
     attr focus_canvas = True
+    alias canvas_resist_width: canvas.resist_width
+    alias canvas_resist_height: canvas.resist_height
+    alias canvas_hug_width: canvas.hug_width
+    alias canvas_hug_height: canvas.hug_height
 
     initialized ::
         if focus_canvas:
