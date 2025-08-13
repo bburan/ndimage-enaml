@@ -15,7 +15,6 @@ dependencies = [
     "enaml[qt6-pyside]",
     "matplotlib",
     "numpy",
-    "raster-geometry",
 ]
 dynamic = ["version"]
 
