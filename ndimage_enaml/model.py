@@ -6,11 +6,11 @@ from atom.api import Atom, Bool, Dict, Float, Int, List, Str, Typed
 from enaml.colors import ColorMember
 from matplotlib import transforms as T
 import numpy as np
-from raster_geometry import sphere
 from scipy import ndimage
 from scipy import signal
 
 from . import util
+from .raster_geometry import sphere
 
 
 class ChannelConfig(Atom):
