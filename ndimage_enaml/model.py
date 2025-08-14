@@ -10,7 +10,7 @@ from scipy import ndimage
 from scipy import signal
 
 from . import util
-from .raster_geometry import sphere
+from .sphere import sphere
 
 
 class ChannelConfig(Atom):
