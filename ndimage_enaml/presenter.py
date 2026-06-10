@@ -1,4 +1,7 @@
 from copy import deepcopy
+from datetime import datetime, timezone
+import getpass
+import socket
 import threading
 import time
 
@@ -494,6 +497,10 @@ class StatePersistenceMixin(Atom):
     #: determine if there are unsaved changes)
     saved_state = Dict()
 
+    #: Meta information in loaded state (used to persist information across
+    #: load/save).
+    saved_meta = Dict()
+
     def _default_saved_state(self):
         return self.get_full_state()
 
@@ -505,8 +512,14 @@ class StatePersistenceMixin(Atom):
             'data': self.obj.get_state(),
         })
 
-    def save_state(self):
+    def save_state(self, include_meta=True):
+        self.saved_meta.setdefault('history', []).append({
+            'user': getpass.getuser(),
+            'host': socket.gethostname(),
+            'modified': datetime.now(timezone.utc).isoformat(),
+        })
         state = self.get_full_state()
+        state['meta'] = self.saved_meta.copy()
         self.reader.save_state(self.obj, state)
         self.saved_state = state
         self.update_state()
@@ -515,6 +528,7 @@ class StatePersistenceMixin(Atom):
         try:
             state = self.reader.load_state(self.obj)
             self.obj.set_state(state['data'])
+            self.saved_meta = state.get('meta', {})
             # This ensures that any new additions to the state that were not in
             # the saved file get pulled back in for making comparisions to the
             # state (e.g., new keywords in the state dictionary).
