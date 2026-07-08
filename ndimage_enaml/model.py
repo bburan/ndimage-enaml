@@ -207,7 +207,7 @@ class NDImage(Atom):
 
     def get_image(self, channels=None, z_slice=None, axis='z',
                   norm_percentile=99):
-        channel_config = get_channel_config(channels, self.channel_config)
+        channel_config = self.get_channel_config(channels)
         return util.get_image(self.image, channel_config, z_slice=z_slice,
                               axis=axis, norm_percentile=norm_percentile)
 

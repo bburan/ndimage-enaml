@@ -12,7 +12,7 @@ maintainers = [
 ]
 dependencies = [
     "atom",
-    "enaml[qt6-pyside]",
+    "enaml",
     "matplotlib",
     "numpy",
 ]
